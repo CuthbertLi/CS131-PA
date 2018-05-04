@@ -49,8 +49,7 @@ static Symbol
 //
 // Initializing the predefined symbols.
 //
-static void initialize_constants(void)
-{
+static void initialize_constants(void){
 	arg         = idtable.add_string("arg");
 	arg2        = idtable.add_string("arg2");
 	Bool        = idtable.add_string("Bool");
@@ -83,13 +82,14 @@ static void initialize_constants(void)
 
 
 
-ClassTable::ClassTable(Classes classes) : semant_errors(0) , error_stream(cerr) {
+ClassTable::ClassTable(Classes classes): 
+	semant_errors(0) , error_stream(cerr){
 
 	/* Fill this in */
 
 }
 
-void ClassTable::install_basic_classes() {
+void ClassTable::install_basic_classes(){
 
 	// The tree package uses these globals to annotate the classes built below.
    // curr_lineno  = 0;
@@ -205,19 +205,16 @@ void ClassTable::install_basic_classes() {
 //
 ///////////////////////////////////////////////////////////////////
 
-ostream& ClassTable::semant_error(Class_ c)
-{                                                             
+ostream& ClassTable::semant_error(Class_ c){                                                         
 	return semant_error(c->get_filename(),c);
 }    
 
-ostream& ClassTable::semant_error(Symbol filename, tree_node *t)
-{
+ostream& ClassTable::semant_error(Symbol filename, tree_node *t){
 	error_stream << filename << ":" << t->get_line_number() << ": ";
 	return semant_error();
 }
 
-ostream& ClassTable::semant_error()                  
-{                                                 
+ostream& ClassTable::semant_error(){
 	semant_errors++;                            
 	return error_stream;
 } 
@@ -236,9 +233,8 @@ ostream& ClassTable::semant_error()
 	 You are free to first do 1), make sure you catch all semantic
 	 errors. Part 2) can be done in a second stage, when you want
 	 to build mycoolc.
- */
-void program_class::semant()
-{
+*/
+void program_class::semant(){
 	initialize_constants();
 
 	/* ClassTable constructor may do some semantic analysis */
