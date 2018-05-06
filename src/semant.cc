@@ -1,12 +1,8 @@
-
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include "semant.h"
 #include "utilities.h"
-
-
 extern int semant_debug;
 extern char *curr_filename;
 
@@ -80,13 +76,9 @@ static void initialize_constants(void){
 	val         = idtable.add_string("_val");
 }
 
-
-
-ClassTable::ClassTable(Classes classes): 
-	semant_errors(0) , error_stream(cerr){
+ClassTable::ClassTable(Classes classes): semant_errors(0), error_stream(cerr){
 
 	/* Fill this in */
-
 }
 
 void ClassTable::install_basic_classes(){
@@ -219,8 +211,6 @@ ostream& ClassTable::semant_error(){
 	return error_stream;
 } 
 
-
-
 /*   This is the entry point to the semantic checker.
 
 	 Your checker should do the following two things:
@@ -247,4 +237,3 @@ void program_class::semant(){
 	exit(1);
 	}
 }
-
