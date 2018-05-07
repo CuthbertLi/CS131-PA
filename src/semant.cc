@@ -83,7 +83,7 @@ ostream& ClassTable::report_inheritance_error(Class_ c){
 }
 
 // "Class B inherits from an undefined class A."
-ostream& ClassTable::report_inherit_undefined_error(Class_ c){
+ostream& ClassTable::report_inheritance_undefined_error(Class_ c){
 	Symbol name1 = c -> get_name();
 	Symbol name2 = (c -> get_parent()) -> get_name();
 	return semant_error(c1) << "Class " << name1 << " inherits from an undefined class " << name2 << std::endl;
