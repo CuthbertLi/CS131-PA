@@ -13,10 +13,9 @@ class ClassTable;
 typedef ClassTable *ClassTableP;
 
 // This is a structure that may be used to contain the semantic
-// information such as the inheritance graph.  You may use it or not as
+// information such as the inheritance graph. You may use it or not as
 // you like: it is only here to provide a container for the supplied
-// methods.
-
+// methods. 
 class ClassTable {
 private:
 	int semant_errors;
@@ -25,6 +24,17 @@ private:
 	
 	Classes classes_;
 	Class_ cur_class_;
+
+	Graph inheritance_graph;
+	void get_inheritance_graph(Classes);
+
+	ostream& report_inheritance_error(Class_ c);
+	ostream& report_redefined_error(Class_ c);
+	ostream& report_inheritance_undefined_error(Class_ c);
+
+	// bool is_cyclic(Class_ c1, Class_ c2);
+	bool is_defined(Class_ c, Classes classes, int k);
+	bool has_been_defined(Class_ c, Classes classes, int k);
 public:
 	ClassTable(Classes);
 	int errors() { return semant_errors; }
@@ -42,7 +52,14 @@ public:
 	void add_variables(Class_ c);
 	bool is_subclass(Class_ c1, Class_ c2);
 	Symbol get_lca(Symbol name1, Symbol name2, ClassTableP classtable);
-
 };
+
+class Graph {
+private:
+public:
+	void insert(Class_ c1, Class_ c2){
+		adjacency_matrix[c1][c2] = 1;
+	}
+}
 
 #endif
