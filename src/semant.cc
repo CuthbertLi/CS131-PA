@@ -175,6 +175,7 @@ ClassTable::ClassTable(Classes classes): semant_errors(0), error_stream(cerr){
 	// Second, check all the other semantic conditions
 	// it is illegal to redefine attribute names
 	// add class in classes into classes_
+	install_basic_classes();
 }
 
 void ClassTable::install_basic_classes(){
