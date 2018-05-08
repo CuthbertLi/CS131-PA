@@ -77,7 +77,7 @@ static void initialize_constants(void){
 }
 
 // "Class B, or an ancestor of B, is involved in an inheritance cycle."
-ostream& ClassTable::report_inheritance_error(Class_ c){
+ostream& ClassTable::report_inheritance_cycle_error(Class_ c){
 	Symbol name = c -> get_name();
 	return semant_error(c) << "Class " << name << ", or an ancestor of " << name << ", is involved in an inheritance cycle." << std::endl;
 }
@@ -85,8 +85,8 @@ ostream& ClassTable::report_inheritance_error(Class_ c){
 // "Class B inherits from an undefined class A."
 ostream& ClassTable::report_inheritance_undefined_error(Class_ c){
 	Symbol name1 = c -> get_name();
-	Symbol name2 = (c -> get_parent()) -> get_name();
-	return semant_error(c1) << "Class " << name1 << " inherits from an undefined class " << name2 << std::endl;
+	Symbol name2 = c -> get_parent();
+	return semant_error(c) << "Class " << name1 << " inherits from an undefined class " << name2 << std::endl;
 }
 
 // "Class C was previously defined."
@@ -95,19 +95,31 @@ ostream& ClassTable::report_redefined_error(Class_ c){
 	return semant_error(c) << "Class " << name << " was previously defined.";
 }
 
-// // return true if c1 is parent of c2
-// // and c2 is parent of c1 simultaneously
-// // , or c1 == c2
-// // , return false otherwise
-// bool ClassTable::is_cyclic(Class_ c1, Class_ c2){
-// 	if (c1 -> get_name() == c2 -> get_name()){
-// 		return false;
-// 	}
-// 	if (is_subclass(c1, c2) and is_subclass(c2, c1)){
-// 		return true;
-// 	}
-// 	return false;
-// }
+// return true if c1 is parent of c2
+// and c2 is parent of c1 simultaneously
+// , or c1 == c2
+// , return false otherwise
+bool ClassTable::is_cyclic(Class_ c1, Class_ c2){
+	if (c1 -> get_name() == c2 -> get_name()){
+		return false;
+	}
+	if (is_subclass(c1, c2) and is_subclass(c2, c1)){
+		return true;
+	}
+	return false;
+}
+
+bool ClassTable::cyclic_inheritance(Class_ c, Classes classes){
+	int i;
+	int length = classes -> len();
+	for (i = 0; i < length; i++){
+		Class_ c1 = classes -> nth(i);
+		if (is_cyclic(c1, c)){
+			return true;
+		}
+	}
+	return false;
+}
 
 // return whether c has been defined within classes
 bool ClassTable::is_defined(Class_ c, Classes classes, int k){
@@ -136,6 +148,37 @@ bool ClassTable::has_been_defined(Class_ c, Classes classes, int k){
 	return false;
 }
 
+// initialize classes_
+// and ensure Class_ elements in it 
+// are topologically sorted
+void ClassTable::get_topological_sort(Classes classes){
+	int i, j;
+	int length = classes -> len();
+	topological_sort.addid(Object, Object);
+	topological_sort.addid(IO, IO);
+	topological_sort.addid(Int, Int);
+	topological_sort.addid(Str, Str);
+	topological_sort.addid(Bool, Bool);
+	for (i = 0; i < length; i++){
+		Class_ c = classes -> nth(i);
+		if (cyclic_inheritance(c, classes)){
+			report_inheritance_cycle_error(c);
+		}
+	}
+	int c;
+	for (c = 0; c < length; c++){
+		for (i = 0; i < length; i++){
+			Class_ c = classes -> nth(i);
+			if (topological_sort.lookup(c -> get_parent())
+				and !topological_sort.lookup(c -> get_name())){
+				topological_sort.addid(c -> get_name(), c -> get_name());
+				// add c -> get_name() into classes_ 
+			}
+		}
+	}
+	return;
+}
+
 ClassTable::ClassTable(Classes classes): semant_errors(0), error_stream(cerr){
 	int i;
 	int length = classes -> len();
@@ -152,11 +195,6 @@ ClassTable::ClassTable(Classes classes): semant_errors(0), error_stream(cerr){
 		// 	// 	report_inheritance_error(c);
 		// 	// 	report_inheritance_error(c1);
 		// 	// }
-		// 	// check whether c has been defined
-		// 	if (c -> get_name() == c1 -> get_name() and i > j){
-		// 		report_redefined_error(c);
-		// 	}
-		// }
 		// check whether c has been defined *before*
 		// (error if yes)
 		if (has_been_defined(c, classes, i)){
@@ -164,18 +202,19 @@ ClassTable::ClassTable(Classes classes): semant_errors(0), error_stream(cerr){
 		}
 		// check whether the parent of c is defined
 		// (error if no)
-		if (!is_defined(c -> get_parent(), classes, i)){
+		if (!is_defined(get_class(c -> get_parent()), classes, i)){
 			report_inheritance_undefined_error(c);
 		}
 	}
 	// check whether inheritance 
 	// graph is acyclic
-	// when constructing inheritance_graph
-	get_inheritance_graph(classes);
+	// in generate_topological_sort
+	get_topological_sort(classes);
 	// Second, check all the other semantic conditions
 	// it is illegal to redefine attribute names
 	// add class in classes into classes_
-	install_basic_classes();
+	// get_classes_();
+	// install_basic_classes();
 }
 
 void ClassTable::install_basic_classes(){
@@ -323,12 +362,12 @@ ostream& ClassTable::semant_error(){
 Class_ ClassTable::get_class(Symbol name){
 	if (name == SELF_TYPE || name == self)
 		name = symbol_table.lookup(self);
-
 	for (int i = classes_->first(); classes_->more(i); i = classes_->next(i)){
 		Class_ cur_class =classes_->nth(i);
 		if (name == cur_class->get_name())
 			return cur_class;
 	}
+	return NULL;
 }
 
 void method_class::add(ClassTableP classtable){
