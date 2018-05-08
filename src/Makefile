@@ -22,6 +22,7 @@ SEMANT_OBJS := ${filter-out symtab_example.o,${OBJS}}
 
 semant:  ${SEMANT_OBJS}  
 	${CC} ${CFLAGS} ${SEMANT_OBJS} ${LIB} -o semant
+	-rm -f  *.s core ${OBJS} ${CSRC} symtab_example  *.d *~ *.a *.o
 
 symtab_example: symtab_example.cc 
 	${CC} ${CFLAGS} symtab_example.cc ${LIB} -o symtab_example
@@ -40,7 +41,6 @@ ${CSRC}:
 
 clean :
 	-rm -f  *.s core ${OBJS} ${CSRC} semant   symtab_example  *.d *~ *.a *.o
- 
 
 %.d: %.cc ${SRC}
 	${SHELL} -ec '${DEPEND} $< | sed '\''s/\($*\.o\)[ :]*/\1 $@ : /g'\'' > $@'
