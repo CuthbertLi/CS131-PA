@@ -43,8 +43,10 @@ private:
 
 	bool is_cyclic(Class_ c1, Class_ c2);
 	bool cyclic_inheritance(Class_ c, Classes classes);
-	bool is_defined(Class_ c, Classes classes, int k);
+	bool is_defined(Symbol s, Classes classes);
 	bool has_been_defined(Class_ c, Classes classes, int k);
+	bool is_basic_class(Class_ c);
+	bool is_basic_class(Symbol name);
 
 	void insert(Class_);
 	void get_topological_sort(Classes);

@@ -92,7 +92,7 @@ ostream& ClassTable::report_inheritance_undefined_error(Class_ c){
 // "Class C was previously defined."
 ostream& ClassTable::report_redefined_error(Class_ c){
 	Symbol name = c -> get_name();
-	return semant_error(c) << "Class " << name << " was previously defined.";
+	return semant_error(c) << "Class " << name << " was previously defined." << std::endl;
 }
 
 // return true if c1 is parent of c2
@@ -100,10 +100,12 @@ ostream& ClassTable::report_redefined_error(Class_ c){
 // , or c1 == c2
 // , return false otherwise
 bool ClassTable::is_cyclic(Class_ c1, Class_ c2){
+	// printf("*************\n");
 	if (c1 -> get_name() == c2 -> get_name()){
 		return false;
 	}
 	if (is_subclass(c1, c2) and is_subclass(c2, c1)){
+		// printf("(9999\n");
 		return true;
 	}
 	return false;
@@ -121,13 +123,49 @@ bool ClassTable::cyclic_inheritance(Class_ c, Classes classes){
 	return false;
 }
 
+bool ClassTable::is_basic_class(Class_ c){
+	Symbol name = c -> get_name();
+	if (name == Object or name == Int or name == Str){
+		return true;
+	}
+	if (name == IO or name == Bool){
+		return true;
+	}
+	return false;
+}
+
+bool ClassTable::is_basic_class(Symbol name){
+	if (name == Object or name == Int or name == Str){
+		return true;
+	}
+	if (name == IO or name == Bool){
+		return true;
+	}
+	return false;
+}
+
 // return whether c has been defined within classes
-bool ClassTable::is_defined(Class_ c, Classes classes, int k){
+bool ClassTable::is_defined(Symbol s, Classes classes){
+	// printf("&&&&&&\n");
+	// if (c == NULL){
+	// 	printf("LLLLLLLLL.....\n");
+	// 	return true;
+	// }
+	if (is_basic_class(s)){
+		// printf("KJJJJJJJJJJJJJJJJ\n");
+		return true;
+	}
+	// printf("LKKJJJJJJ\n");
 	int i;
+	// if (classes == NULL){
+	// 	printf("LKKJJJJJJ\n");
+	// }
 	int length = classes -> len();
+	// printf("&&&&&&\n");
 	for (i = 0; i < length; i++){
 		Class_ c1 = classes -> nth(i);
-		if ((c -> get_name() == c1 -> get_name())){
+		c1 -> get_name();
+		if (s == c1 -> get_name()){
 			return true;
 		}
 	}
@@ -135,13 +173,17 @@ bool ClassTable::is_defined(Class_ c, Classes classes, int k){
 }
 
 // return whether c has been defined before 
-// the k-th entry in class
+// the k-th entry in classes
 bool ClassTable::has_been_defined(Class_ c, Classes classes, int k){
+	if (is_basic_class(c)){
+		return true;
+	}
 	int i;
 	int length = classes -> len();
+	Symbol name = c -> get_name();
 	for (i = 0; i < k; i++){
 		Class_ c1 = classes -> nth(i);
-		if ((c -> get_name() == c1 -> get_name())){
+		if (name == c1 -> get_name()){
 			return true;
 		}
 	}
@@ -152,64 +194,79 @@ bool ClassTable::has_been_defined(Class_ c, Classes classes, int k){
 // and ensure Class_ elements in it 
 // are topologically sorted
 void ClassTable::get_topological_sort(Classes classes){
-	int i, j;
+	int i, k;
+	// printf("*************\n");
 	int length = classes -> len();
+	topological_sort.enterscope();
 	topological_sort.addid(Object, Object);
 	topological_sort.addid(IO, IO);
 	topological_sort.addid(Int, Int);
 	topological_sort.addid(Str, Str);
 	topological_sort.addid(Bool, Bool);
-	for (i = 0; i < length; i++){
-		Class_ c = classes -> nth(i);
-		if (cyclic_inheritance(c, classes)){
-			report_inheritance_cycle_error(c);
-		}
-	}
-	int c;
-	for (c = 0; c < length; c++){
+	// for (i = 0; i < length; i++){
+	// 	Class_ c = classes -> nth(i);
+	// 	if (cyclic_inheritance(c, classes)){
+	// 		report_inheritance_cycle_error(c);
+	// 	}
+	// }
+	for (k = 0; k < 10 * length + 10; k++){
 		for (i = 0; i < length; i++){
 			Class_ c = classes -> nth(i);
 			if (topological_sort.lookup(c -> get_parent())
 				and !topological_sort.lookup(c -> get_name())){
 				topological_sort.addid(c -> get_name(), c -> get_name());
 				// add c -> get_name() into classes_ 
+				classes_ = append_Classes(classes_, single_Classes(c));
+				// cout << (c -> get_name()) << std::endl;
+				// printf("**********\n");
 			}
 		}
 	}
+	// if (classes_ -> len() < length + 5){
+	for (i = 0; i < length; i++){
+		Class_ c = classes -> nth(i);
+		if (!is_defined(c -> get_name(), classes_))
+			report_inheritance_cycle_error(c);
+	}
+	// }
+	// printf(":::::::::::::::\n");
 	return;
 }
 
 ClassTable::ClassTable(Classes classes): semant_errors(0), error_stream(cerr){
 	int i;
+	install_basic_classes();
 	int length = classes -> len();
 	// First, check that the inheritance graph is well-defined, meaning
 	// that all the restrictions on inheritance are satisfied
+	// check whether c has been defined *before*
+	// (error if yes)
 	for (i = 0; i < length; i++){
 		Class_ c = classes -> nth(i);
-		// for (j = 0; j < length; j++){
-		// 	Class_ c1 = classes -> nth(j);
-		// 	// // check whether inheritance 
-		// 	// // graph is acyclic
-		// 	// check_cyclic_inheritance(c, c1);
-		// 	// if (is_cyclic(c, c1)){
-		// 	// 	report_inheritance_error(c);
-		// 	// 	report_inheritance_error(c1);
-		// 	// }
-		// check whether c has been defined *before*
-		// (error if yes)
+		// printf("/////////\n");
 		if (has_been_defined(c, classes, i)){
 			report_redefined_error(c);
 		}
-		// check whether the parent of c is defined
-		// (error if no)
-		if (!is_defined(get_class(c -> get_parent()), classes, i)){
+	}
+	// check whether the parent of c is defined
+	// (error if no)
+	for (i = 0; i < length; i++){
+		Class_ c = classes -> nth(i);
+		// printf("*********\n");
+		// cout << (c -> get_name()) << " " << (c -> get_parent()) << ".IIII..." << std::endl;
+		if (!is_defined(c -> get_parent(), classes)){
+			// printf("ccccccccccccc\n");
+			// cout << (c -> get_name()) << " " << (c -> get_parent()) << "...." << std::endl;
 			report_inheritance_undefined_error(c);
 		}
+		// printf("////////55555555555^^^^^^/\n");
 	}
+	// printf("(((\n");
 	// check whether inheritance 
 	// graph is acyclic
 	// in generate_topological_sort
 	get_topological_sort(classes);
+	// printf("LLLLLL............\n");
 	// Second, check all the other semantic conditions
 	// it is illegal to redefine attribute names
 	// add class in classes into classes_
@@ -222,6 +279,7 @@ void ClassTable::install_basic_classes(){
 	// The tree package uses these globals to annotate the classes built below.
    // curr_lineno  = 0;
 	Symbol filename = stringtable.add_string("<basic class>");
+	// printf(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>888888888888\n");
 	
 	// The following demonstrates how to create dummy parse trees to
 	// refer to basic Cool classes.  There's no need for method
@@ -316,6 +374,11 @@ void ClassTable::install_basic_classes(){
 							  Str, 
 							  no_expr()))),
 		   filename);
+	classes_ = single_Classes(Object_class);
+	classes_ = append_Classes(classes_, single_Classes(IO_class));
+	classes_ = append_Classes(classes_, single_Classes(Int_class));
+	classes_ = append_Classes(classes_, single_Classes(Bool_class));
+	classes_ = append_Classes(classes_, single_Classes(Str_class));
 }
 
 ////////////////////////////////////////////////////////////////////
@@ -344,7 +407,7 @@ ostream& ClassTable::semant_error(Symbol filename, tree_node *t){
 ostream& ClassTable::semant_error(){
 	semant_errors++;                            
 	return error_stream;
-} 
+}
 
 /* This is the entry point to the semantic checker. 
 
@@ -360,10 +423,21 @@ ostream& ClassTable::semant_error(){
 	 to build mycoolc.
 */
 Class_ ClassTable::get_class(Symbol name){
+	// printf("kkkkkkkKKKKKKK\n");
 	if (name == SELF_TYPE || name == self)
 		name = symbol_table.lookup(self);
+	// printf("kkkkkkkKKKK&&&&&&KKK\n");
+	// if (classes_ == NULL){
+	// 	printf("AAAAAAAAAAAAAAAAAAA\n");
+	// }
+	// printf("DDDDDDDDDDDDDDDDDDDDDDDD\n");
+	// printf("%d..................", classes_ -> len());
+	// printf(">>>>>>>>>>><<<<<<<<<<00000000000000\n");
 	for (int i = classes_->first(); classes_->more(i); i = classes_->next(i)){
+	// for (int i = 0; i < classes_ -> ){
+		// printf("%d//////////\n", i);
 		Class_ cur_class =classes_->nth(i);
+		// printf("(((((((((\n");
 		if (name == cur_class->get_name())
 			return cur_class;
 	}
@@ -632,7 +706,7 @@ Symbol static_dispatch_class::semant(ClassTableP classtable){
 
 	method_class *m = classtable->get_method(p, name);
 
-	if (m = NULL){
+	if (m == NULL){
 		classtable->semant_error(classtable->get_current_class()) << "Method:  " << name << "is undefined in class: " << type1 << std::endl;
 		type = Object;
 		return type;
@@ -680,7 +754,7 @@ Symbol dispatch_class::semant(ClassTableP classtable){
 
 	method_class *m = classtable->get_method(c, name);
 
-	if (m = NULL){
+	if (m == NULL){
 		classtable->semant_error(classtable->get_current_class()) << "Method:  " << name << "is undefined in class: " << type1 << std::endl;
 		type = Object;
 		return type;
@@ -932,6 +1006,11 @@ Symbol int_const_class::semant(ClassTableP classtable){
 
 Symbol string_const_class::semant(ClassTableP classtable){
 	type = Str;
+	return type;
+}
+
+Symbol bool_const_class::semant(ClassTableP classtable){
+	type = Bool;
 	return type;
 }
 
