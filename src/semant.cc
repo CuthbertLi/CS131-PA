@@ -452,7 +452,7 @@ void method_class::add(ClassTableP classtable){
 		Formal_class *formal = formals->nth(i);
 
 		if (temp.lookup(formal->get_name()) != NULL){
-			classtable->semant_error(classtable->get_current_class()) << "Name " << formal->get_name() << "already exist" << std::endl;
+			classtable->semant_error(classtable->get_current_class()) << "Name " << formal->get_name() << " already exist" << std::endl;
 			return;
 		}
 
@@ -465,7 +465,7 @@ void method_class::add(ClassTableP classtable){
 
 void attr_class::add(ClassTableP classtable){
 	if (classtable->symbol_table.lookup(name) != NULL){
-		classtable->semant_error(classtable->get_current_class()) << "Attribute " << name << "already exist" << std::endl;
+		classtable->semant_error(classtable->get_current_class()) << "Attribute " << name << " already exist" << std::endl;
 		return;
 	}
 
@@ -663,7 +663,7 @@ Symbol branch_class::semant(ClassTableP classtable){
 Symbol assign_class::semant(ClassTableP classtable){
 	Symbol type1 = classtable->symbol_table.lookup(name);
 
-	if (type == NULL){
+	if (type1 == NULL){
 		classtable->semant_error(classtable->get_current_class()) << "Undeclared: " << name  << std::endl;
 		type = Object;
 		return type;
@@ -707,14 +707,14 @@ Symbol static_dispatch_class::semant(ClassTableP classtable){
 	method_class *m = classtable->get_method(p, name);
 
 	if (m == NULL){
-		classtable->semant_error(classtable->get_current_class()) << "Method:  " << name << "is undefined in class: " << type1 << std::endl;
+		classtable->semant_error(classtable->get_current_class()) << "Method: " << name << " is undefined in class: " << type1 << std::endl;
 		type = Object;
 		return type;
 	}
 	
 	Formals formals_ = m->get_formals();
 	if (actual->len() != formals_->len()){
-		classtable->semant_error(classtable->get_current_class()) << "Lenght of Actuals is not equal to the formals" << std::endl;
+		classtable->semant_error(classtable->get_current_class()) << name << " expects " << m->get_formals()->len() << " parameters " << actual->len() << " given" << std::endl;
 		type = Object;
 		return type;
 	}
@@ -724,8 +724,7 @@ Symbol static_dispatch_class::semant(ClassTableP classtable){
 		Symbol formal_type = formals_->nth(i)->get_type();
 
 		if (actual_type != formal_type && !classtable->is_subclass(classtable->get_class(actual_type), classtable->get_class(formal_type))){
-			classtable->semant_error(classtable->get_current_class()) << "Actuals does not conforms with the Formals" << std::endl;
-			type = Object;
+			classtable->semant_error(classtable->get_current_class()) << name << " parameter " << i << " expected " << formal_type <<  " given " << actual_type << std::endl;type = Object;
 			return type;
 		}
 	}
@@ -755,7 +754,7 @@ Symbol dispatch_class::semant(ClassTableP classtable){
 	method_class *m = classtable->get_method(c, name);
 
 	if (m == NULL){
-		classtable->semant_error(classtable->get_current_class()) << "Method:  " << name << "is undefined in class: " << type1 << std::endl;
+		classtable->semant_error(classtable->get_current_class()) << "Method: " << name << " is undefined in class: " << type1 << std::endl;
 		type = Object;
 		return type;
 	}
@@ -772,8 +771,7 @@ Symbol dispatch_class::semant(ClassTableP classtable){
 		Symbol formal_type = formals_->nth(i)->get_type();
 
 		if (actual_type != formal_type && !classtable->is_subclass(classtable->get_class(actual_type), classtable->get_class(formal_type))){
-			classtable->semant_error(classtable->get_current_class()) << "Actuals does not conforms with the Formals" << std::endl;
-			type = Object;
+			classtable->semant_error(classtable->get_current_class()) << name << " parameter " << i << " expected " << formal_type <<  " given " << actual_type << std::endl;type = Object;
 			return type;
 		}
 	}
@@ -1004,13 +1002,13 @@ Symbol int_const_class::semant(ClassTableP classtable){
 	return type;
 }
 
-Symbol string_const_class::semant(ClassTableP classtable){
-	type = Str;
+Symbol bool_const_class::semant(ClassTableP classtable) {
+	type = Bool;
 	return type;
 }
 
-Symbol bool_const_class::semant(ClassTableP classtable){
-	type = Bool;
+Symbol string_const_class::semant(ClassTableP classtable) {
+	type = Str;
 	return type;
 }
 
