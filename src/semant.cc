@@ -816,6 +816,11 @@ Symbol int_const_class::semant(ClassTableP classtable) {
 	return type;
 }
 
+Symbol bool_const_class::semant(ClassTableP classtable) {
+	type = Bool;
+	return type;
+}
+
 Symbol string_const_class::semant(ClassTableP classtable) {
 	type = Str;
 	return type;
