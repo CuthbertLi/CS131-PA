@@ -105,7 +105,7 @@ static void initialize_constants(void){
 }
 
 static int local_var_offset = 1;
-static int max_lable = 1;
+static int max_label = 1;
 
 static char *gc_init_names[] =
 	{ "_NoGC_Init", "_GenGC_Init", "_ScnGC_Init" };
@@ -130,7 +130,6 @@ BoolConst truebool(TRUE);
 // generator.
 //
 //*********************************************************
-
 void program_class::cgen(ostream &os){
 	// spim wants comments to start with '#'
 	os << "# start of generated code\n";
@@ -563,7 +562,6 @@ void CgenClassTable::code_select_gc(){
 // and producing code for each entry.
 //
 //********************************************************
-
 void CgenClassTable::code_constants(){
 	//
 	// Add constants that are required by the code generator.
@@ -575,7 +573,6 @@ void CgenClassTable::code_constants(){
 	inttable.code_string_table(str,intclasstag);
 	code_bools(boolclasstag);
 }
-
 
 CgenClassTable::CgenClassTable(Classes classes, ostream& s): nds(NULL) , str(s){
 	 stringclasstag = 0 /* Change to your String class tag here */;
@@ -815,7 +812,9 @@ CgenNode::CgenNode(Class_ nd, Basicness bstatus, CgenClassTableP ct):
 //   constant integers, strings, and booleans are provided.
 //
 //*****************************************************************
+// name <- expr
 void assign_class::code(ostream &s){
+	expr -> code(s);
 	return;
 }
 
@@ -920,7 +919,7 @@ void branch_result(ostream &s){
 void lt_class::code(ostream &s){
 	init_binary(s, e1, e2);
 	// emit_blt(char *src1, char *src2, int label, ostream &s)
-	emit_blt(T1, ACC, max_lable + 1);
+	emit_blt(T1, ACC, max_label + 1, s);
 	branch_result(s);
 	return;
 }
@@ -928,14 +927,14 @@ void lt_class::code(ostream &s){
 // e1 = e2
 void eq_class::code(ostream &s){
 	init_binary(s, e1, e2);
-	emit_beq(T1, ACC, max_lable + 1);
+	emit_beq(T1, ACC, max_label + 1, s);
 	branch_result(s);
 	return;
 }
 
 void leq_class::code(ostream &s){
 	init_binary(s, e1, e2);
-	emit_bleq(T1, ACC, max_lable + 1);
+	emit_bleq(T1, ACC, max_label + 1, s);
 	branch_result(s);
 	return;
 }
@@ -943,7 +942,7 @@ void leq_class::code(ostream &s){
 void comp_class::code(ostream &s){
 	// emit_load_bool(char *dest, const BoolConst& b, ostream& s)
 	emit_load_bool(T1, falsebool, s);
-	emit_bleq(a1, T1, max_lable + 1);
+	emit_bleq(ACC, T1, max_label + 1, s);
 	branch_result(s);
 	return;
 }
