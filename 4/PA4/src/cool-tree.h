@@ -8,7 +8,7 @@
 //
 //////////////////////////////////////////////////////////
 
-
+#include <list>
 #include "tree.h"
 #include "cool-tree.handcode.h"
 
@@ -47,8 +47,17 @@ typedef class Feature_class *Feature;
 
 class Feature_class : public tree_node {
 public:
+   Symbol parent;
+
    tree_node *copy()		 { return copy_Feature(); }
    virtual Feature copy_Feature() = 0;
+   virtual Symbol get_name() = 0;
+   void set_parent(Symbol parent_) { parent = parent_; }
+   virtual void build_feature_map(std::list<Feature> *methods, std::list<Feature> *attrs) = 0;
+   virtual void code_prototype_object(ostream& s) = 0;
+   virtual void code_dispatch_table(ostream& s) = 0;
+   virtual void code_object_initializer(std::list<Feature> *attrs, ostream& s) = 0;
+   virtual void code_class_method(ostream& s) = 0;
 
 #ifdef Feature_EXTRAS
    Feature_EXTRAS
@@ -63,7 +72,7 @@ class Formal_class : public tree_node {
 public:
    tree_node *copy()		 { return copy_Formal(); }
    virtual Formal copy_Formal() = 0;
-
+   virtual Symbol get_name() = 0;
 #ifdef Formal_EXTRAS
    Formal_EXTRAS
 #endif
@@ -187,6 +196,13 @@ public:
    }
    Feature copy_Feature();
    void dump(ostream& stream, int n);
+   Symbol get_name() { return name; };
+   void build_feature_map(std::list<Feature> *methods, std::list<Feature> *attrs);
+   void code_prototype_object(ostream& s){};
+   void code_dispatch_table(ostream& s);
+   void code_object_initializer(std::list<Feature> *attrs, ostream& s){};
+   void code_class_method(ostream& s);
+
 
 #ifdef Feature_SHARED_EXTRAS
    Feature_SHARED_EXTRAS
@@ -211,6 +227,12 @@ public:
    }
    Feature copy_Feature();
    void dump(ostream& stream, int n);
+   Symbol get_name() { return name; };
+   void build_feature_map(std::list<Feature> *methods, std::list<Feature> *attrs);
+   void code_prototype_object(ostream& s);
+   void code_dispatch_table(ostream& s){};
+   void code_object_initializer(std::list<Feature> *attrs, ostream& s);
+   void code_class_method(ostream& s){};
 
 #ifdef Feature_SHARED_EXTRAS
    Feature_SHARED_EXTRAS
@@ -233,6 +255,7 @@ public:
    }
    Formal copy_Formal();
    void dump(ostream& stream, int n);
+   Symbol get_name() { return name; };
 
 #ifdef Formal_SHARED_EXTRAS
    Formal_SHARED_EXTRAS
