@@ -418,14 +418,14 @@ void IntEntry::code_def(ostream &s, int intclasstag){
 	s << WORD << "-1" << endl;
 
 	code_ref(s);  s << LABEL                                // label
-			<< WORD << intclasstag << endl                      // class tag
-			<< WORD << (DEFAULT_OBJFIELDS + INT_SLOTS) << endl  // object size
-			<< WORD; 
+		<< WORD << intclasstag << endl                      // class tag
+		<< WORD << (DEFAULT_OBJFIELDS + INT_SLOTS) << endl  // object size
+		<< WORD; 
 
-	 /***** Add dispatch information for class Int ******/
-			s << INTNAME << DISPTAB_SUFFIX;
-			s << endl;                                          // dispatch table
-			s << WORD << str << endl;                           // integer value
+		/***** Add dispatch information for class Int ******/
+		s << INTNAME << DISPTAB_SUFFIX;
+		s << endl;                                          // dispatch table
+		s << WORD << str << endl;                           // integer value
 }
 
 //
@@ -675,13 +675,13 @@ void CgenNode::code_dispatch_table(ostream &s) {
 	}
 }
 
-void CgenClassTable::code_dispatch_table() {
+void CgenClassTable::code_dispatch_table(){
 	for (List<CgenNode> *l = nds; l; l = l->tl()) {
 		l->hd()->code_dispatch_table(str);
 	}
 }
 
-void attr_class::code_object_initializer(std::list<Feature> *attrs, ostream &s) {
+void attr_class::code_object_initializer(std::list<Feature> *attrs, ostream &s){
 	if (init->type) {
 		int offset = get_offset(attrs, name);
 		init->code(s);
@@ -771,24 +771,18 @@ void CgenClassTable::code_class_methods() {
 	}
 }
 
-
 CgenClassTable::CgenClassTable(Classes classes, ostream& s): nds(NULL) , str(s){
-
-
-	 enterscope();
-	 if (cgen_debug) cout << "Building CgenClassTable" << endl;
-	 install_basic_classes();
-	 install_classes(classes);
-	 build_inheritance_tree();
-
-	 build_feature_map();
-
-	 code();
-	 exitscope();
+	enterscope();
+	if (cgen_debug) cout << "Building CgenClassTable" << endl;
+	install_basic_classes();
+	install_classes(classes);
+	build_inheritance_tree();
+	build_feature_map();
+	code();
+	exitscope();
 }
 
-void CgenNode::set_tag()
-{
+void CgenNode::set_tag(){
   tag = max_tag++;
   if (name == Str) {
     stringclasstag = tag;
@@ -1090,6 +1084,9 @@ CgenNode::CgenNode(Class_ nd, Basicness bstatus, CgenClassTableP ct):
 // name <- expr
 void assign_class::code(ostream &s){
 	expr -> code(s);
+	ObjectLocation *location = (nodep -> get_vars()) -> lookup(name);
+	// emit_store(char *source_reg, int offset, char *dest_reg, ostream& s)
+	emit_store(ACC, location, get_register, s);
 	return;
 }
 
@@ -1099,19 +1096,56 @@ void static_dispatch_class::code(ostream &s){
 void dispatch_class::code(ostream &s){
 }
 
+// if pred then then_exp else else_exp
 void cond_class::code(ostream &s){
+	int label = max_label;
+	max_label += 2;
+	pred -> code(s);
+	// bne $a0, truebool, label_x
+	emit_load_bool(T1, truebool, s);
+	emit_beq(ACC, T1, s);
+	// then_exp
+	then_exp -> code(s);
+	// b label1
+	emit_branch(label, s);
+	// label0: else_exp
+	else_exp -> code(s);
+	// label1: 
+	emit_label_def(label + 1, s);
+	return;
 }
 
+// while pred loop body pool
 void loop_class::code(ostream &s){
+	int label = max_label;
+	max_label += 2;
+	// label0: 
+	emit_label_def(label, s);
+	// 	pred
+	pred -> code(s);
+	// 	lw truebool, $t1
+	emit_load_bool(T1, truebool, s);
+	// 	bne $a0, $t1, label1
+	emit_bne(ACC, T1, label + 1, s);
+	// 	body
+	body -> code(s);
+	// 	j label0
+	emit_branch(label, s);
+	// label1:
+	emit_label_def(label + 1, s);
+	emit_load_imm(ACC, 0, s);
+	return;
 }
 
+// expr cases
 void typcase_class::code(ostream &s){
 }
 
+// body
 void block_class::code(ostream &s){
 	int i;
 	for(i = body -> first(); body -> more(i); i = body -> next(i)){
-		body->nth(i)->code(s);
+		body -> nth(i) -> code(s);
 	}
 	return;
 }
@@ -1174,12 +1208,15 @@ void divide_class::code(ostream &s){
 	return;
 }
 
+// ~e1
 void neg_class::code(ostream &s){
 	e1 -> code(s);
 	emit_neg(ACC, ACC, s);
 	return;
 }
 
+// max_label + 1: $a0 = true
+// otherwise: false
 void branch_result(ostream &s){
 	emit_load_bool(ACC, falsebool, s);
 	emit_branch(max_label, s);
@@ -1207,6 +1244,7 @@ void eq_class::code(ostream &s){
 	return;
 }
 
+// e1 <= e2
 void leq_class::code(ostream &s){
 	init_binary(s, e1, e2);
 	emit_bleq(T1, ACC, max_label + 1, s);
@@ -1214,10 +1252,12 @@ void leq_class::code(ostream &s){
 	return;
 }
 
+// not e1
 void comp_class::code(ostream &s){
 	// emit_load_bool(char *dest, const BoolConst& b, ostream& s)
+	e1 -> code(s);
 	emit_load_bool(T1, falsebool, s);
-	emit_bleq(ACC, T1, max_label + 1, s);
+	emit_beq(ACC, T1, max_label + 1, s);
 	branch_result(s);
 	return;
 }
@@ -1243,11 +1283,17 @@ void bool_const_class::code(ostream& s){
 void new__class::code(ostream &s){
 }
 
+// isvoid e1
 void isvoid_class::code(ostream &s){
+	e1 -> code(s);
+	emit_beq(ACC, ZERO, max_label + 1, s);
+	branch_result(s);
+	return;
 }
 
 void no_expr_class::code(ostream &s){
 	emit_load_imm(ACC, 0, s);
+	return;
 }
 
 void object_class::code(ostream &s) {
