@@ -1377,4 +1377,11 @@ void no_expr_class::code(ostream &s){
 }
 
 void object_class::code(ostream &s) {
+	if (name == self) {
+		emit_move(ACC, SELF, s);
+		return;
+	}
+	ObjectLocation *location = cur_node -> get_vars() -> lookup(name);
+	emit_load(ACC, location -> get_offset(), location -> get_register(), s);
+	return;
 }
