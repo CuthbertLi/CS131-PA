@@ -1381,7 +1381,6 @@ void object_class::code(ostream &s) {
 		emit_move(ACC, SELF, s);
 		return;
 	}
-	
 	ObjectLocation *location = cur_node -> get_vars() -> lookup(name);
 	emit_load(ACC, location -> get_offset(), location -> get_register(), s);
 	return;
