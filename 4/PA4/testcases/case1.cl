@@ -4,7 +4,7 @@ class Main {
 		{
 
 		case 58 of
-			id1: INT => 3;
+			id1: Int => 3;
 			
 		esac;
 
