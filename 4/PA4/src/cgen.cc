@@ -111,6 +111,7 @@ static int stringclasstag ;
 static int intclasstag;
 static int boolclasstag;
 static CgenNodeP cur_node;
+static CgenClassTableP tablep;
 
 static char *gc_init_names[] 
 	{ "_NoGC_Init", "_GenGC_Init", "_ScnGC_Init" };
@@ -771,6 +772,7 @@ void CgenClassTable::code_class_methods() {
 }
 
 CgenClassTable::CgenClassTable(Classes classes, ostream& s): nds(NULL) , str(s){
+	tablep = this;
 	enterscope();
 	if (cgen_debug) cout << "Building CgenClassTable" << endl;
 	install_basic_classes();
@@ -1088,10 +1090,34 @@ void assign_class::code(ostream &s){
 	return;
 }
 
-void static_dispatch_class::code(ostream &s){
+void dispatch(Expression expr, Symbol type_name, 
+	Symbol name, Expressions actual, ostream &s) {
+	for(int i = actual->first(); actual->more(i); i = actual -> next(i)) {
+		actual -> nth(i) -> code(s);
+		emit_push(ACC, s);
+	}
+	expr -> code(s);
+	// runtime error: dispatch on void
+	emit_bne(ACC, ZERO, max_label, s);
+	StringEntry *entry = stringtable.lookup_string(
+		cur_node -> get_filename() -> get_string());
+	emit_load_string(ACC, entry, s);
+	emit_load_imm(T1, cur_node -> get_line_number(), s);
+	emit_jal("_dispatch_abort", s);
+	// label: 
+	emit_label_def(max_label, s);
 }
 
+// expr@type_name.name(actual)
+void static_dispatch_class::code(ostream &s){
+	dispatch(expr, type_name, name, actual, s);
+	return;
+}
+
+// expr.name(actual)
 void dispatch_class::code(ostream &s){
+	dispatch(expr, No_type, name, actual, s);
+	return;
 }
 
 // if pred then then_exp else else_exp
@@ -1151,7 +1177,17 @@ void branch_class::code(ostream &s){
 
 // case expr of cases esac
 void typcase_class::code(ostream &s){
+	int label = max_label;
+	max_label += (cases -> len()) + 3;
 	expr -> code(s);
+	// runtime error: case on void
+	emit_bne(ACC, ZERO, label, s);
+	StringEntry *entry = stringtable.lookup_string(cur_node -> get_filename() -> get_string());
+	emit_load_string(ACC, entry, s);
+	emit_load_imm(T1, cur_node -> get_line_number(), s);
+	// jal _case_abort2
+	emit_jal("_case_abort2", s);
+	emit_label_def(label, s);
 	return;
 }
 
