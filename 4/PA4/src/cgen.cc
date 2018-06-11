@@ -689,7 +689,6 @@ void attr_class::code_object_initializer(std::list<Feature> *attrs, ostream &s){
 	}
 }
 
-
 void CgenNode::code_object_initializer(ostream &s) {
 	cur_node = this;
 	emit_init_ref(name, s);
@@ -840,7 +839,6 @@ void method_class::build_feature_map(std::list<Feature> *methods, std::list<Feat
 void attr_class::build_feature_map(std::list<Feature> *methods, std::list<Feature> *attrs) {
 	attrs->push_back(this);
 }
-
 
 void CgenClassTable::install_basic_classes(){
 	// The tree package uses these globals to annotate the classes built below.
@@ -1084,9 +1082,9 @@ CgenNode::CgenNode(Class_ nd, Basicness bstatus, CgenClassTableP ct):
 // name <- expr
 void assign_class::code(ostream &s){
 	expr -> code(s);
-	ObjectLocation *location = (nodep -> get_vars()) -> lookup(name);
+	ObjectLocation *location = cur_node -> get_vars() -> lookup(name);
 	// emit_store(char *source_reg, int offset, char *dest_reg, ostream& s)
-	emit_store(ACC, location, get_register, s);
+	emit_store(ACC, location -> get_offset(), location -> get_register(), s);
 	return;
 }
 
@@ -1103,12 +1101,13 @@ void cond_class::code(ostream &s){
 	pred -> code(s);
 	// bne $a0, truebool, label_x
 	emit_load_bool(T1, truebool, s);
-	emit_beq(ACC, T1, s);
+	emit_beq(ACC, T1, label, s);
 	// then_exp
 	then_exp -> code(s);
 	// b label1
-	emit_branch(label, s);
+	emit_branch(label + 1, s);
 	// label0: else_exp
+	emit_label_def(label, s);
 	else_exp -> code(s);
 	// label1: 
 	emit_label_def(label + 1, s);
@@ -1137,8 +1136,23 @@ void loop_class::code(ostream &s){
 	return;
 }
 
-// expr cases
+// name : typeid => expr
+void branch_class::code(ostream &s){
+	cur_node -> get_vars() -> enterscope();
+	cur_node -> get_vars() -> addid(name, new ObjectLocation(FP, -local_var_offset));
+	emit_push(ACC, s);
+	local_var_offset++;
+	expr -> code(s);
+	emit_addiu(SP, SP, WORD_SIZE, s);
+	local_var_offset--;
+	cur_node -> get_vars() -> exitscope();
+	return;
+}
+
+// case expr of cases esac
 void typcase_class::code(ostream &s){
+	expr -> code(s);
+	return;
 }
 
 // body
@@ -1152,6 +1166,33 @@ void block_class::code(ostream &s){
 
 // let identifier: type_decl <- init in body
 void let_class::code(ostream &s){
+	init -> code(s);
+	cur_node -> get_vars() -> enterscope();
+	cur_node -> get_vars() -> 
+		addid(identifier, new ObjectLocation(FP, -local_var_offset));
+	// if there is no intialization
+	// the variable is set to default 
+	// value of T1
+	if (init -> type == NULL) {
+		if (type_decl == Str) {
+			StringEntry *entry = stringtable.lookup_string("");
+			emit_load_string(ACC, entry, s);
+		} 
+		else if (type_decl == Int) {
+			IntEntry *entry = inttable.lookup_string("0");
+			emit_load_int(ACC, entry, s);
+		} 
+		else if (type_decl == Bool) {
+			emit_load_bool(ACC, falsebool, s);
+		}
+	}
+	emit_push(ACC, s);
+	local_var_offset++;
+	body -> code(s);
+	emit_addiu(SP, SP, WORD_SIZE, s);
+	local_var_offset--;
+	cur_node -> get_vars() -> exitscope();
+	return;
 }
 
 void init_binary(ostream &s, Expression e1, Expression e2){
@@ -1262,6 +1303,7 @@ void comp_class::code(ostream &s){
 	return;
 }
 
+// token
 void int_const_class::code(ostream& s){
 	//
 	// Need to be sure we have an IntEntry *, not an arbitrary Symbol
@@ -1270,11 +1312,13 @@ void int_const_class::code(ostream& s){
 	return;
 }
 
+// token
 void string_const_class::code(ostream& s){
 	emit_load_string(ACC, stringtable.lookup_string(token->get_string()), s);
 	return;
 }
 
+// val
 void bool_const_class::code(ostream& s){
 	emit_load_bool(ACC, BoolConst(val), s);
 	return;
