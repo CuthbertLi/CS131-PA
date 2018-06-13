@@ -50,6 +50,7 @@ public:
    void code();
    CgenNodeP root();
    CgenNodeP lookup_tag(int tag);
+   CgenNodeP lookup_name(Symbol name);
 };
 
 class ObjectLocation {
