@@ -645,7 +645,18 @@ CgenNodeP CgenClassTable::lookup_tag(int tag) {
 			return l->hd();
 		}
 	}
+	return NULL;
+}
 
+CgenNodeP CgenClassTable::lookup_name(Symbol name) {
+	if (name == SELF_TYPE){
+		return cur_node;
+	}
+	for (List<CgenNode> *l = nds; l; l = l->tl()) {
+		if (l->hd()->get_name() == name) {
+			return l->hd();
+		}
+	}
 	return NULL;
 }
 
@@ -1093,8 +1104,7 @@ void assign_class::code(ostream &s){
 	return;
 }
 
-void dispatch(Expression expr, Symbol type_name, 
-	Symbol name, Expressions actual, ostream &s) {
+void init_dispatch(Expression expr, Symbol name, Expressions actual, ostream &s){
 	for(int i = actual->first(); actual->more(i); i = actual -> next(i)) {
 		actual -> nth(i) -> code(s);
 		emit_push(ACC, s);
@@ -1106,20 +1116,48 @@ void dispatch(Expression expr, Symbol type_name,
 		cur_node -> get_filename() -> get_string());
 	emit_load_string(ACC, entry, s);
 	emit_load_imm(T1, cur_node -> get_line_number(), s);
+	// Called when a dispatch is 
+	// attempted on a void object. 
+	// Prints the line number, from $t1
+	// , and filename, from $a0
+	// , at which the dispatch occurred
+	// , and aborts.
 	emit_jal("_dispatch_abort", s);
 	// label: 
 	emit_label_def(max_label, s);
+	return;
+}
+
+int get_method_offset(Symbol type_name, Symbol name){
+	CgenNodeP node = tablep -> lookup_name(type_name);
+	int result = get_offset(node -> get_methods(), name);
+	return result;
+}
+
+void finish_dispatch(Symbol type_name, Symbol name, ostream &s){
+	int offset = get_method_offset(type_name, name);
+	emit_load(T1, offset, T1, s);
+	emit_jalr(T1, s);
+	max_label++;
+	return;
 }
 
 // expr@type_name.name(actual)
 void static_dispatch_class::code(ostream &s){
-	dispatch(expr, type_name, name, actual, s);
+	init_dispatch(expr, name, actual, s);
+	emit_partial_load_address(T1, s);
+	emit_disptable_ref(type_name, s);
+	s << endl;
+	finish_dispatch(type_name, name, s);
 	return;
 }
 
 // expr.name(actual)
 void dispatch_class::code(ostream &s){
-	dispatch(expr, No_type, name, actual, s);
+	init_dispatch(expr, name, actual, s);
+	emit_load(T1, DISPTABLE_OFFSET, ACC, s);
+	Symbol type_name = expr -> get_type();
+	finish_dispatch(type_name, name, s);
 	return;
 }
 
