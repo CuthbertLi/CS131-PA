@@ -77,6 +77,7 @@ private:
    SymbolTable<Symbol, ObjectLocation> *vars;
 
    int tag;
+   int class_max_tag;
    void set_tag();
 public:
    CgenNode(Class_ c,
@@ -93,6 +94,7 @@ public:
    std::list<Feature> *get_attrs() { return attrs; }
    SymbolTable<Symbol, ObjectLocation> *get_vars() { return vars; }
    int get_tag() { return tag; }
+   int get_max_tag() { return class_max_tag; }
 
    void build_feature_map();
    void code_prototype_object(ostream& s);

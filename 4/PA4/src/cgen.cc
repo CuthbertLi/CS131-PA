@@ -798,6 +798,7 @@ CgenClassTable::CgenClassTable(Classes classes, ostream& s): nds(NULL) , str(s){
 
 void CgenNode::set_tag(){
   tag = max_tag++;
+  class_max_tag = tag;
   if (name == Str) {
     stringclasstag = tag;
   } else if (name == Int) {
@@ -838,6 +839,7 @@ void CgenNode::build_feature_map() {
 
 	for (List<CgenNode> *l = children; l; l = l->tl()) {
 		l->hd()->build_feature_map();
+		class_max_tag = (l->hd()->get_max_tag() >= class_max_tag)?l->hd()->get_max_tag():class_max_tag;
 	}
 }
 
@@ -1203,6 +1205,11 @@ void loop_class::code(ostream &s){
 	return;
 }
 
+bool compare_branch_tag(const Case c1, const Case c2) {
+	return c1->get_tag() >= c2->get_tag() && c1->get_max_tag() <= c2->get_max_tag();
+}
+
+
 // name : typeid => expr
 void branch_class::code(ostream &s){
 	cur_node -> get_vars() -> enterscope();
@@ -1229,6 +1236,48 @@ void typcase_class::code(ostream &s){
 	// jal _case_abort2
 	emit_jal("_case_abort2", s);
 	emit_label_def(label, s);
+
+	// push $a0, the condition
+	emit_push(ACC, s);
+  	local_var_offset++;
+	label++;
+
+	std::list<Case> cases_list;
+	// Set tag for each case
+	for (int i = cases->first(); cases->more(i); i = cases->next(i)) {
+		Case c = cases->nth(i);
+		CgenNodeP node = tablep->lookup_name(c->get_type_decl());
+		c->set_tag(node->get_tag());
+		c->set_max_tag(node->get_max_tag());
+		cases_list.push_back(c);
+	}
+	// Sort cases by tag
+	cases_list.sort(compare_branch_tag);
+
+	for (std::list<Case>::iterator it = cases_list.begin(); it != cases_list.end(); ++it) {
+		int branch_offset = std::distance(cases_list.begin(), it);
+		Case c = *it;
+
+		emit_label_def(label + branch_offset, s);
+		// load the condition
+		emit_load(ACC, 1, SP, s);
+		emit_load(T1, TAG_OFFSET, ACC, s);
+		//compare
+		emit_blti(T1, c->get_tag(), label + branch_offset + 1, s);
+		emit_bgti(T1, c->get_max_tag(), label + branch_offset + 1, s);
+		//cgen(e)
+		c->code(s);
+		// jump out
+		emit_branch(label + cases_list.size() + 1, s);
+	}
+
+	emit_label_def(label + cases_list.size(), s);
+	emit_load(ACC, 1, SP, s);
+	emit_jal("_case_abort", s);
+
+	emit_label_def(label + cases_list.size() + 1, s);
+	emit_addiu(SP, SP, WORD_SIZE, s);
+	local_var_offset--;	
 	return;
 }
 
@@ -1402,6 +1451,34 @@ void bool_const_class::code(ostream& s){
 }
 
 void new__class::code(ostream &s){
+	if (type_name == SELF_TYPE) {
+		// Load Class_objTab addr
+		emit_load_address(T1, "class_objTab", s);
+		// Load class tag
+		emit_load(T2, 0, SELF, s);
+		emit_sll(T2, T2, 3, s);
+		emit_addu(T1, T1, T2, s);
+
+		emit_push(T1, s);
+		local_var_offset++;
+
+		emit_load(ACC, 0, T1, s);
+		emit_jal("Object.copy", s);
+		
+		emit_load(T2, 1, SP, s);
+		emit_addiu(SP, SP, 4, s);
+		local_var_offset--;
+
+		emit_load(T1, 1, T2, s);
+		emit_jalr(T1, s);
+	} else {
+		emit_partial_load_address(ACC, s);
+		emit_protobj_ref(type_name, s);
+		emit_jal("Object.copy", s);
+		s << JAL;
+		emit_init_ref(type_name, s);
+		s << endl;
+	}
 }
 
 // isvoid e1
