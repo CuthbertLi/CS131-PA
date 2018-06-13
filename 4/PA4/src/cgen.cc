@@ -408,6 +408,7 @@ void StrTable::code_string_table(ostream& s, int stringclasstag){
 //
 void IntEntry::code_ref(ostream &s){
 	s << INTCONST_PREFIX << index;
+	return;
 }
 
 //
@@ -446,6 +447,7 @@ BoolConst::BoolConst(int i) : val(i) { assert(i == 0 || i == 1); }
 
 void BoolConst::code_ref(ostream& s) const {
 	s << BOOLCONST_PREFIX << val;
+	return;
 }
 	
 //
@@ -619,7 +621,7 @@ void CgenClassTable::code_prototype_objects(){
 	}
 }
 
-std::list<Feature>::iterator lookup_name(std::list<Feature> *l, Symbol name) {
+std::list<Feature>::iterator lookup_name(std::list<Feature> *l, Symbol name){
 	std::list<Feature>::iterator it;
 	for (it = l->begin(); it != l->end(); ++it) {
 		
@@ -1007,6 +1009,7 @@ void CgenClassTable::set_relations(CgenNodeP nd){
 
 void CgenNode::add_child(CgenNodeP n){
 	children = new List<CgenNode>(n,children);
+	return;
 }
 
 void CgenNode::set_parentnd(CgenNodeP p){
