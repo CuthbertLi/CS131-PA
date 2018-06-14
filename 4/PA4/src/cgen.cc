@@ -1474,6 +1474,7 @@ void new__class::code(ostream &s){
 	} else {
 		emit_partial_load_address(ACC, s);
 		emit_protobj_ref(type_name, s);
+		s << endl;
 		emit_jal("Object.copy", s);
 		s << JAL;
 		emit_init_ref(type_name, s);
