@@ -582,7 +582,7 @@ void CgenClassTable::code_constants(){
 	code_bools(boolclasstag);
 }
 
-void attr_class::code_prototype_object(ostream &s) {
+void attr_class::code_prototype_object(ostream &s){
 	s << WORD;
 
 	if (type_decl == Int) {
@@ -601,7 +601,7 @@ void attr_class::code_prototype_object(ostream &s) {
 	s << endl;
 }
 
-void CgenNode::code_prototype_object(ostream &s) {
+void CgenNode::code_prototype_object(ostream &s){
 	s << WORD << "-1" << endl;
 	emit_protobj_ref(name, s);
 	s << LABEL;
@@ -633,14 +633,14 @@ std::list<Feature>::iterator lookup_name(std::list<Feature> *l, Symbol name){
 	return it;
 }
 
-int get_offset(std::list<Feature> *l, Symbol name) {
+int get_offset(std::list<Feature> *l, Symbol name){
 	std::list<Feature>::iterator it = lookup_name(l, name);
 	
 	return std::distance(l->begin(), it);
 }
 
-CgenNodeP CgenClassTable::lookup_tag(int tag) {
-	for (List<CgenNode> *l = nds; l; l = l->tl()) {
+CgenNodeP CgenClassTable::lookup_tag(int tag){
+	for (List<CgenNode> *l = nds; l; l = l->tl()){
 		if (l->hd()->get_tag() == tag) {
 			return l->hd();
 		}
@@ -652,7 +652,7 @@ CgenNodeP CgenClassTable::lookup_name(Symbol name) {
 	if (name == SELF_TYPE){
 		return cur_node;
 	}
-	for (List<CgenNode> *l = nds; l; l = l->tl()) {
+	for (List<CgenNode> *l = nds; l; l = l->tl()){
 		if (l->hd()->get_name() == name) {
 			return l->hd();
 		}
@@ -684,7 +684,7 @@ void method_class::code_dispatch_table(ostream &s) {
 void CgenNode::code_dispatch_table(ostream &s) {
 	emit_disptable_ref(name, s);
 	s << LABEL;
-	for (std::list<Feature>::iterator it = methods->begin(); it != methods->end(); it++) {
+	for (std::list<Feature>::iterator it = methods->begin(); it != methods->end(); it++){
 		(*it)->code_dispatch_table(s);		
 	}
 }
@@ -1471,7 +1471,8 @@ void new__class::code(ostream &s){
 
 		emit_load(T1, 1, T2, s);
 		emit_jalr(T1, s);
-	} else {
+	}
+	else {
 		emit_partial_load_address(ACC, s);
 		emit_protobj_ref(type_name, s);
 		s << endl;
